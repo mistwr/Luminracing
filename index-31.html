@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>LUMIN AI Games — Drag Racer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#07070b;
+    --bg2:#0e0e16;
+    --panel:#101018;
+    --accent:#a0ffb8;
+    --accent-dim:#5fae73;
+    --red:#ff5c5c;
+    --yellow:#ffd95c;
+    --text:#eef0ee;
+    --muted:#8a8f93;
+    --border:#22242c;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{margin:0;padding:0;width:100%;height:100%;background:var(--bg);color:var(--text);
+    font-family:'Space Mono',monospace; overflow:hidden; overscroll-behavior:none;}
+  h1,h2,h3,.display{font-family:'Syne',sans-serif;}
+  #app{position:fixed;inset:0;}
+  canvas#scene{position:absolute;inset:0;display:block;}
+
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 0%, #15151f 0%, var(--bg) 70%); z-index:10; padding:24px; gap:16px; overflow-y:auto;}
+  .hidden{display:none !important;}
+
+  .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:34px;letter-spacing:-0.5px;text-align:center;line-height:1.1;}
+  .logo span{color:var(--accent);}
+  .tagline{color:var(--muted);font-size:12px;letter-spacing:2px;text-transform:uppercase;text-align:center;margin-bottom:8px;}
+
+  .btn{background:var(--panel);border:1px solid var(--border);color:var(--text);padding:14px 22px;border-radius:10px;
+    font-family:'Space Mono',monospace;font-weight:700;font-size:14px;cursor:pointer;width:min(320px,84vw);text-align:center;
+    transition:transform .08s ease, border-color .15s ease; letter-spacing:.5px;}
+  .btn:active{transform:scale(.97);}
+  .btn-accent{background:var(--accent);color:#06140a;border-color:var(--accent);}
+  .btn-outline{background:transparent;border-color:var(--accent-dim);color:var(--accent);}
+  .btn:disabled{opacity:.4;}
+  .btn-row{display:flex;gap:10px;width:min(320px,84vw);}
+  .btn-row .btn{flex:1;width:auto;}
+
+  .field{width:min(320px,84vw);}
+  .field label{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px;}
+  .field input{width:100%;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:12px 14px;
+    border-radius:10px;font-family:'Space Mono',monospace;font-size:15px;letter-spacing:1px;}
+  .field input:focus{outline:none;border-color:var(--accent-dim);}
+
+  .panel-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;width:min(360px,90vw);}
+  .msg{font-size:12px;color:var(--yellow);min-height:14px;text-align:center;}
+  .small{font-size:11px;color:var(--muted);text-align:center;max-width:300px;}
+
+  /* HUD */
+  #hud{position:absolute;inset:0;z-index:5;pointer-events:none;display:none;}
+  #hud.show{display:block;}
+  .hud-top{position:absolute;top:env(safe-area-inset-top,10px);left:0;right:0;display:flex;justify-content:space-between;
+    padding:10px 14px;}
+  .hud-chip{background:rgba(16,16,24,.7);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:10px;
+    padding:6px 12px;font-size:12px;letter-spacing:1px;}
+  .hud-chip b{color:var(--accent);}
+  #treeWrap{position:absolute;top:60px;left:50%;transform:translateX(-50%);display:flex;gap:8px;}
+  .treeLamp{width:16px;height:16px;border-radius:50%;background:#1c1c24;border:1px solid #2b2b35;}
+  .treeLamp.on{background:var(--yellow);box-shadow:0 0 14px var(--yellow);}
+  .treeLamp.green.on{background:var(--accent);box-shadow:0 0 16px var(--accent);}
+  .treeLamp.red.on{background:var(--red);box-shadow:0 0 16px var(--red);}
+
+  #centerMsg{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);text-align:center;
+    font-family:'Syne',sans-serif;font-weight:800;font-size:46px;color:var(--text);text-shadow:0 4px 18px rgba(0,0,0,.6);}
+  #centerMsg.accent{color:var(--accent);}
+  #centerMsg.red{color:var(--red);}
+
+  .hud-bottom{position:absolute;bottom:0;left:0;right:0;padding:0 14px env(safe-area-inset-bottom,14px);
+    display:flex;align-items:flex-end;justify-content:space-between;gap:10px;}
+  #gaugeBox{background:rgba(16,16,24,.75);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:12px;
+    padding:10px 14px;min-width:150px;}
+  .gaugeRow{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:2px;}
+  .gaugeVal{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;color:var(--text);}
+  #rpmBar{width:140px;height:7px;background:#1c1c24;border-radius:4px;overflow:hidden;margin-top:6px;}
+  #rpmFill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--yellow),var(--red));}
+  #gearLabel{font-family:'Syne',sans-serif;font-weight:800;font-size:30px;color:var(--accent);}
+
+  .touchControls{pointer-events:auto;display:flex;gap:10px;align-items:flex-end;}
+  .padBtn{width:74px;height:74px;border-radius:50%;background:rgba(16,16,24,.78);border:2px solid var(--border);
+    display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:11px;
+    color:var(--text);text-align:center;line-height:1.1;}
+  .padBtn.gas{width:94px;height:94px;background:rgba(160,255,184,.18);border-color:var(--accent);color:var(--accent);font-size:13px;}
+  .padBtn:active{transform:scale(.92);}
+  #nitroBtn{background:rgba(255,92,92,.16);border-color:var(--red);color:var(--red);}
+  #nitroBtn.depleted{opacity:.3;}
+
+  #opponentBar{position:absolute;top:120px;left:14px;right:14px;display:flex;flex-direction:column;gap:5px;pointer-events:none;}
+  .raceBarRow{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted);}
+  .raceBarTrack{flex:1;height:5px;background:#1c1c24;border-radius:3px;overflow:hidden;}
+  .raceBarFill{height:100%;width:0%;background:var(--accent);}
+  .raceBarFill.op{background:var(--red);}
+
+  table.lb{width:100%;border-collapse:collapse;font-size:12px;}
+  table.lb td{padding:6px 4px;border-bottom:1px solid var(--border);}
+  table.lb td.rank{color:var(--accent);width:24px;}
+  table.lb td.time{text-align:right;color:var(--accent);}
+
+  .carGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:min(360px,90vw);}
+  .carCard{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:10px;text-align:center;cursor:pointer;}
+  .carCard.selected{border-color:var(--accent);}
+  .carCard.locked{opacity:.45;}
+  .carSwatch{width:44px;height:24px;border-radius:6px;margin:0 auto 6px;}
+  .carName{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;}
+  .carStats{font-size:9px;color:var(--muted);margin-top:4px;}
+
+  .chapterList{width:min(360px,90vw);display:flex;flex-direction:column;gap:8px;}
+  .chapterCard{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;
+    justify-content:space-between;align-items:center;cursor:pointer;}
+  .chapterCard.locked{opacity:.4;}
+  .chapterTitle{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;}
+  .chapterSub{font-size:10px;color:var(--muted);}
+  .stars{color:var(--yellow);font-size:13px;letter-spacing:2px;}
+
+  #storyBox{width:min(360px,90vw);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;}
+  #storyBox .rivalName{color:var(--accent);font-family:'Syne',sans-serif;font-weight:700;}
+  #storyText{font-size:13px;line-height:1.6;margin:12px 0;}
+
+  .topbar{position:absolute;top:env(safe-area-inset-top,10px);left:14px;right:14px;display:flex;justify-content:space-between;
+    align-items:center;z-index:11;}
+  .iconBtn{width:38px;height:38px;border-radius:10px;background:var(--panel);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;color:var(--text);font-size:16px;cursor:pointer;}
+
+  .roomCode{font-family:'Syne',sans-serif;font-weight:800;font-size:32px;letter-spacing:6px;color:var(--accent);text-align:center;}
+  ::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- ============ HUD (in-race) ============ -->
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-chip">ET <b id="hudTime">0.00</b>s</div>
+      <div class="hud-chip"><b id="hudDist">0</b>/402m</div>
+      <div class="hud-chip"><b id="hudSpeed">0</b> km/h</div>
+    </div>
+    <div id="opponentBar">
+      <div class="raceBarRow"><span style="width:36px">TU</span><div class="raceBarTrack"><div class="raceBarFill" id="barPlayer"></div></div></div>
+      <div class="raceBarRow" id="opRow"><span style="width:36px">CPU</span><div class="raceBarTrack"><div class="raceBarFill op" id="barOpp"></div></div></div>
+    </div>
+    <div id="treeWrap">
+      <div class="treeLamp" data-i="0"></div><div class="treeLamp" data-i="1"></div><div class="treeLamp" data-i="2"></div>
+      <div class="treeLamp red" data-i="3"></div><div class="treeLamp green" data-i="4"></div>
+    </div>
+    <div id="centerMsg"></div>
+    <div class="hud-bottom">
+      <div id="gaugeBox">
+        <div class="gaugeRow"><span>VELOCIDADE</span><span id="gearLabel">N</span></div>
+        <div class="gaugeVal"><span id="hudSpeed2">0</span> <span style="font-size:12px;color:var(--muted)">km/h</span></div>
+        <div id="rpmBar"><div id="rpmFill"></div></div>
+      </div>
+      <div class="touchControls">
+        <div class="padBtn" id="nitroBtn">NOS</div>
+        <div class="padBtn" id="shiftBtn">SHIFT</div>
+        <div class="padBtn gas" id="gasBtn">GÁS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MENU PRINCIPAL ============ -->
+  <div class="screen" id="screenMenu">
+    <div class="logo">LUMIN AI<br><span>GAMES</span></div>
+    <div class="tagline">Drag Racer · Quarto de Milha</div>
+    <div id="menuProfileBox" class="panel-card hidden" style="text-align:center;">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;" id="menuUsername">—</div>
+      <div class="small" style="margin-top:6px;">Melhor ET: <b id="menuBestTime" style="color:var(--accent)">—</b> · Moedas: <b id="menuCoins" style="color:var(--yellow)">0</b></div>
+    </div>
+    <button class="btn btn-accent" id="btnCareer">🏁 MODO CARREIRA</button>
+    <button class="btn btn-outline" id="btnQuick">⚡ CORRIDA RÁPIDA</button>
+    <button class="btn btn-outline" id="btnMulti">🌐 MULTIPLAYER ONLINE</button>
+    <button class="btn" id="btnGarage">🚗 GARAGEM</button>
+    <button class="btn" id="btnLeaderboard">🏆 CLASSIFICAÇÃO</button>
+    <button class="btn" id="btnProfile" style="font-size:12px;color:var(--muted);">PERFIL / TROCAR JOGADOR</button>
+  </div>
+
+  <!-- ============ PERFIL ============ -->
+  <div class="screen hidden" id="screenProfile">
+    <div class="topbar"><div class="iconBtn" data-back="screenMenu">←</div><div></div></div>
+    <h2>O Teu Perfil</h2>
+    <div class="field"><label>Nome de piloto</label><input id="inUsername" maxlength="20" placeholder="ex: Speedster"></div>
+    <div class="field"><label>PIN (4 dígitos)</label><input id="inPin" maxlength="4" inputmode="numeric" placeholder="1234"></div>
+    <div class="btn-row">
+      <button class="btn btn-accent" id="btnCreateProfile">CRIAR</button>
+      <button class="btn btn-outline" id="btnLoginProfile">ENTRAR</button>
+    </div>
+    <div class="msg" id="profileMsg"></div>
+    <div class="small">Perfil guardado online (Supabase) — entra com o mesmo nome + PIN em qualquer dispositivo.</div>
+  </div>
+
+  <!-- ============ GARAGEM ============ -->
+  <div class="screen hidden" id="screenGarage">
+    <div class="topbar"><div class="iconBtn" data-back="screenMenu">←</div><div class="hud-chip">💰 <b id="garageCoins">0</b></div></div>
+    <h2>Garagem</h2>
+    <div class="carGrid" id="carGrid"></div>
+    <div class="small" id="carDetail">Escolhe um carro</div>
+  </div>
+
+  <!-- ============ CARREIRA: capítulos ============ -->
+  <div class="screen hidden" id="screenCareer">
+    <div class="topbar"><div class="iconBtn" data-back="screenMenu">←</div><div></div></div>
+    <h2>Modo Carreira</h2>
+    <div class="chapterList" id="chapterList"></div>
+  </div>
+
+  <!-- ============ CARREIRA: história antes da corrida ============ -->
+  <div class="screen hidden" id="screenStory">
+    <div id="storyBox">
+      <div class="small">CAPÍTULO <span id="storyChapterNum"></span></div>
+      <h3 id="storyTitle" style="margin:4px 0;"></h3>
+      <div class="rivalName" id="storyRival"></div>
+      <div id="storyText"></div>
+      <button class="btn btn-accent" id="btnStoryStart" style="width:100%;">CORRER →</button>
+    </div>
+  </div>
+
+  <!-- ============ MULTIPLAYER LOBBY ============ -->
+  <div class="screen hidden" id="screenMulti">
+    <div class="topbar"><div class="iconBtn" data-back="screenMenu">←</div><div></div></div>
+    <h2>Multiplayer Online</h2>
+    <button class="btn btn-accent" id="btnCreateRoom">CRIAR SALA</button>
+    <div class="field"><label>Código da sala</label><input id="inRoomCode" maxlength="6" placeholder="ABC123" style="text-transform:uppercase;letter-spacing:4px;text-align:center;"></div>
+    <button class="btn btn-outline" id="btnJoinRoom">ENTRAR NA SALA</button>
+    <div class="msg" id="multiMsg"></div>
+  </div>
+
+  <div class="screen hidden" id="screenWaitRoom">
+    <div class="roomCode" id="waitRoomCode">——————</div>
+    <div class="small">Partilha este código com o teu adversário</div>
+    <div class="msg" id="waitStatus">À espera de adversário...</div>
+    <button class="btn" data-back="screenMenu">CANCELAR</button>
+  </div>
+
+  <!-- ============ RESULTADOS ============ -->
+  <div class="screen hidden" id="screenResults">
+    <div class="logo" id="resultTitle" style="font-size:26px;">RESULTADO</div>
+    <div class="panel-card">
+      <div class="gaugeRow"><span>TEMPO (ET)</span><span style="color:var(--accent)" id="resTime">0.00s</span></div>
+      <div class="gaugeRow"><span>VEL. TRAP</span><span id="resTrap">0 km/h</span></div>
+      <div class="gaugeRow"><span>REAÇÃO</span><span id="resReaction">0.00s</span></div>
+      <div class="gaugeRow"><span>RESULTADO</span><span id="resOutcome">—</span></div>
+      <div class="gaugeRow"><span>MOEDAS GANHAS</span><span style="color:var(--yellow)" id="resCoins">+0</span></div>
+    </div>
+    <div id="resStars" class="stars" style="font-size:22px;"></div>
+    <button class="btn btn-accent" id="btnResultContinue">CONTINUAR</button>
+    <button class="btn btn-outline" id="btnResultMenu">MENU PRINCIPAL</button>
+  </div>
+
+  <!-- ============ LEADERBOARD ============ -->
+  <div class="screen hidden" id="screenLeaderboard">
+    <div class="topbar"><div class="iconBtn" data-back="screenMenu">←</div><div></div></div>
+    <h2>Classificação Global</h2>
+    <div class="panel-card"><table class="lb" id="lbTable"><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
